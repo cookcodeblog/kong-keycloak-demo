@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang='en'>
+<body>
+<!--keycloak.js form keycloak-->
+<script src='http://localhost:8180/auth/js/keycloak.js'></script>
+<script type='text/javascript'>
+    'use strict'
+    const kongUrl = 'http://localhost:8000/demo/data'
+    const keycloak = Keycloak('keycloak.json')
+    keycloak.init({ onLoad: 'login-required' })
+        .error(function () { alert('error') })
+        .success(function (authenticated) {
+            let req = new XMLHttpRequest()
+            req.open('GET', kongUrl, true)
+            req.setRequestHeader('Accept', 'application/json')
+            req.setRequestHeader('Authorization', 'Bearer ' + keycloak.token)
+            req.onreadystatechange = function () {
+                if (req.readyState === 4) {
+                    if (req.status === 200) {
+                        alert('Response: ' + req.responseText)
+                    } else {
+                        alert('Request returned: ' + req.status)
+                    }
+                }
+            }
+            req.send()
+        })
+</script>
+</body>
+</html>
