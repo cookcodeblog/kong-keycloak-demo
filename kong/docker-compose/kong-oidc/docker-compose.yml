@@ -1,0 +1,86 @@
+version: '3.4'
+
+networks: 
+  kong-net:
+
+volumes:
+  kong-datastore:
+  konga-datastore:
+
+services:
+  kong-db:
+    image: postgres:9.6
+    volumes:
+      - kong-datastore:/var/lib/postgresql/data
+    networks:
+      - kong-net
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB:       kong
+      POSTGRES_USER:     kong
+      POSTGRES_PASSWORD: kong
+
+  kong:
+    build:
+      context: ""
+    image: kong-oidc:latest
+    depends_on:
+      - kong-db
+    volumes:
+      - $HOME/kong/config:/home/kong/
+    networks:
+      - kong-net
+    ports:
+      - "8000:8000" # Listener
+      - "8443:8443" # Listener  (SSL)
+      - "127.0.0.1:8001:8001" # Admin API
+      - "127.0.0.1:8444:8444" # Admin API (SSL)
+    environment:
+      KONG_DATABASE:         postgres
+      KONG_PG_HOST:          kong-db
+      KONG_PG_PORT:          '5432'
+      KONG_PG_DATABASE:      kong
+      KONG_PG_USER:          kong
+      KONG_PG_PASSWORD:      kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG:  /dev/stderr
+      KONG_ADMIN_ERROR_LOG:  /dev/stderr
+      KONG_PROXY_LISTEN:     0.0.0.0:8000, 0.0.0.0:8443 ssl
+      KONG_ADMIN_LISTEN:     0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_PLUGINS:          bundled,oidc
+      KONG_LOG_LEVEL:        debug
+
+  konga-db:
+    image: postgres:9.6
+    volumes:
+      - konga-datastore:/var/lib/postgresql/data
+    networks:
+      - kong-net
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB:       konga
+      POSTGRES_USER:     konga
+      POSTGRES_PASSWORD: konga
+  
+  konga:
+    image: pantsel/konga:latest
+    depends_on:
+      - konga-db
+    networks:
+      - kong-net
+    ports:
+      - "1337:1337"
+    environment:
+      TOKEN_SECRET: secret123
+      DB_ADAPTER: postgres
+      DB_HOST: konga-db
+      DB_PORT: '5432'
+      DB_USER: konga
+      DB_PASSWORD: konga
+      DB_DATABASE: konga
+      NODE_ENV: development
+
+  
